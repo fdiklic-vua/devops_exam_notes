@@ -1,0 +1,123 @@
+napišem compose.yaml
+dignem app + database s Podmanom
+provjerim da app radi
+provjerim da se app spaja na bazu
+pokažem resource usage containera
+kratko usporedim container vs VM
+
+Ako zadatak ne kaže točnu aplikaciju, uzmeš poznati app + DB primjer, npr. WordPress + MySQL.
+
+Cijelo rješenje naredbama
+mkdir -p ~/lo3-task4-app-db
+cd ~/lo3-task4-app-db
+
+cat > compose.yaml <<'EOF'
+services:
+  db:
+    image: docker.io/library/mysql:8.0
+    container_name: task4-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root-pw
+      MYSQL_DATABASE: appdb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: app-pw
+    volumes:
+      
+db_data:/var/lib/mysql
+  networks:
+backend
+
+  app:
+    image: docker.io/library/wordpress:latest
+    container_name: task4-wordpress
+    depends_on:
+      
+db
+  environment:
+    WORDPRESS_DB_HOST: db:3306
+    WORDPRESS_DB_USER: appuser
+    WORDPRESS_DB_PASSWORD: app-pw
+    WORDPRESS_DB_NAME: appdb
+  ports:
+"8080:80"
+networks:
+backend
+
+volumes:
+  db_data:
+
+networks:
+  backend:
+EOF
+
+Pokretanje:
+
+podman compose up -d
+
+Ako podman compose ne radi:
+
+podman-compose up -d
+
+Provjera da containeri rade:
+
+podman ps
+
+Provjera logova:
+
+podman logs task4-wordpress
+podman logs task4-mysql
+
+Provjera aplikacije:
+
+curl http://localhost:8080/
+
+Ili otvori u browseru:
+
+http://localhost:8080/
+
+Provjera da je app published, a baza nije:
+
+podman port task4-wordpress
+podman port task4-mysql
+
+Očekivanje:
+
+task4-wordpress ima 8080:80
+task4-mysql nema published port
+
+Provjera mreže:
+
+podman network ls
+podman network inspect lo3-task4-app-db_backend
+
+Ako network ima malo drugačije ime, uzmeš ime iz podman network ls.
+
+Resource usage containera
+
+Ovo je dio koji se traži za usporedbu s VM-om:
+
+podman stats --no-stream
+
+Možeš dodatno:
+
+podman inspect task4-wordpress
+podman inspect task4-mysql
+Resource usage VM-a
+Ne dižeš novu VM. Ti si već u Algebra VM-u. Samo pokažeš resurse cijelog VM okruženja:
+
+free -h
+df -h
+lscpu
+uptime
+Što screenshotati
+compose.yaml
+podman ps
+browser ili curl http://localhost:8080/
+podman port task4-wordpress i podman port task4-mysql
+podman stats --no-stream
+free -h ili lscpu za VM resurse
+
+Kratko objašnjenje koje napišeš
+The application was deployed locally using Podman as a WordPress container, while the database was deployed as a MySQL container. Both containers are connected to the same custom backend network, so the application reaches the database by using the database service name db and internal MySQL port 3306. Only the application port is published to the host on port 8080, while the database is not exposed directly.
+
+The container resource usage was checked with podman stats. Compared to a virtual machine, containers usually use fewer resources because they do not run a full guest operating system and do not have their own kernel. A VM has stronger isolation because it includes a full OS, but it also has higher memory, CPU and disk overhead. In this task the app and database run as containers inside the existing VM, which is lighter and faster than running each component in a separate VM.
